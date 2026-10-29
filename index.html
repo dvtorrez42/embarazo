@@ -29,8 +29,10 @@
     margin: 0;
     min-height: 100vh;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 20px;
     background: var(--bg);
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -52,6 +54,30 @@
   .bar { height: 10px; background: var(--track); border-radius: 99px; overflow: hidden; }
   .bar div { height: 100%; background: var(--accent); border-radius: 99px; }
   .meta { color: var(--muted); font-size: .9rem; margin-top: 16px; line-height: 1.6; }
+
+  .poll { padding: 28px 24px; text-align: left; }
+  .poll h2 { font-size: 1rem; font-weight: 600; margin: 0 0 4px; }
+  .poll .hint { color: var(--muted); font-size: .85rem; margin: 0 0 16px; }
+  .row { display: block; width: 100%; padding: 6px 8px; margin: 0 -8px 4px; border: 0; border-radius: 10px;
+         background: none; color: inherit; font: inherit; text-align: left; cursor: default; position: relative; }
+  .poll.voting .row { cursor: pointer; }
+  .poll.voting .row:hover, .row.sel { background: var(--track); }
+  .row .top { display: flex; justify-content: space-between; font-size: .95rem; margin-bottom: 4px; }
+  .row .top b { font-weight: 600; }
+  .row .bar { height: 6px; }
+  .row .who { display: none; position: absolute; left: 8px; bottom: calc(100% - 2px); z-index: 1;
+              background: var(--text); color: var(--card); font-size: .8rem; padding: 4px 8px; border-radius: 6px;
+              white-space: nowrap; max-width: 90%; overflow: hidden; text-overflow: ellipsis; }
+  .row:hover .who, .row:focus .who { display: block; }
+  .empty { color: var(--muted); font-size: .9rem; }
+  form { margin-top: 16px; display: grid; gap: 10px; }
+  input[type=text] { width: 100%; padding: 10px 12px; border: 1px solid var(--track); border-radius: 10px;
+                     background: var(--bg); color: var(--text); font: inherit; }
+  label.honor { font-size: .85rem; color: var(--muted); display: flex; gap: 8px; align-items: flex-start; }
+  form button { padding: 10px; border: 0; border-radius: 10px; background: var(--accent); color: #fff;
+                font: inherit; font-weight: 600; cursor: pointer; }
+  form button:disabled { opacity: .5; cursor: default; }
+  .msg { font-size: .85rem; color: var(--muted); margin: 12px 0 0; }
 </style>
 </head>
 <body>
@@ -61,6 +87,19 @@
   <div class="months" id="m"></div>
   <div class="bar"><div id="bar"></div></div>
   <div class="meta" id="meta"></div>
+</main>
+
+<main class="poll" id="poll">
+  <h2>Nombres para el bebé</h2>
+  <p class="hint" id="hint">Pasá el mouse sobre un nombre para ver quién lo votó.</p>
+  <div id="ranking"><p class="empty">Cargando…</p></div>
+  <form id="form" hidden>
+    <input type="text" id="voter" placeholder="Tu nombre" maxlength="60" required autocomplete="name">
+    <input type="text" id="suggest" placeholder="Elegí uno de arriba o sugerí otro" maxlength="40">
+    <label class="honor"><input type="checkbox" id="honor" required> Prometo votar una sola vez</label>
+    <button id="send">Votar</button>
+  </form>
+  <p class="msg" id="msg"></p>
 </main>
 <script>
   // Fecha probable de parto; el inicio de la gestación se calcula como FPP − 280 días
@@ -93,6 +132,104 @@
   document.getElementById('meta').innerHTML =
     `Fecha probable de parto: ${fmt(FPP)}<br>` +
     (left > 0 ? `Faltan ${plural(left, 'día', 'días')}` : '¡Ya llegó la fecha!');
+</script>
+<script>
+  const SUPABASE_URL = 'https://rackcpaqpoyedwdlriiu.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhY2tjcGFxcG95ZWR3ZGxyaWl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyOTEyMjUsImV4cCI6MjEwODg2NzIyNX0.1hAVlPuk3RQHAV0zIztDbtEYswW7ODj_PrWfkshJC1w';
+  const API = `${SUPABASE_URL}/rest/v1/votos`;
+  const HEADERS = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
+  const VOTED_KEY = 'embarazo-voto';
+
+  const $ = id => document.getElementById(id);
+  const poll = $('poll'), form = $('form'), suggest = $('suggest'), msg = $('msg');
+  const norm = s => s.trim().replace(/\s+/g, ' ');
+
+  const getVoted = () => { try { return JSON.parse(localStorage.getItem(VOTED_KEY)); } catch { return null; } };
+  const setVoted = v => { try { localStorage.setItem(VOTED_KEY, JSON.stringify(v)); } catch {} };
+
+  function render(votes) {
+    // Agrupa sin distinguir mayúsculas; se muestra la primera forma en que se escribió
+    const groups = new Map();
+    for (const v of votes) {
+      const k = v.nombre.toLowerCase();
+      if (!groups.has(k)) groups.set(k, { nombre: v.nombre, votantes: [] });
+      groups.get(k).votantes.push(v.votante);
+    }
+    const list = [...groups.values()].sort((a, b) => b.votantes.length - a.votantes.length);
+    const max = list[0]?.votantes.length || 1;
+
+    const ranking = $('ranking');
+    ranking.replaceChildren();
+    if (!list.length) {
+      ranking.innerHTML = '<p class="empty">Todavía no hay nombres. ¡Sugerí el primero!</p>';
+      return;
+    }
+    for (const g of list) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'row';
+      row.innerHTML = '<div class="top"><b></b><span></span></div><div class="bar"><div></div></div><div class="who"></div>';
+      row.querySelector('b').textContent = g.nombre;
+      row.querySelector('.top span').textContent = g.votantes.length;
+      row.querySelector('.bar div').style.width = (g.votantes.length / max * 100) + '%';
+      row.querySelector('.who').textContent = g.votantes.join(', ');
+      row.onclick = () => {
+        if (!poll.classList.contains('voting')) return;
+        suggest.value = g.nombre;
+        markSelected();
+      };
+      ranking.append(row);
+    }
+    markSelected();
+  }
+
+  function markSelected() {
+    const v = norm(suggest.value).toLowerCase();
+    for (const r of document.querySelectorAll('.row'))
+      r.classList.toggle('sel', !!v && r.querySelector('b').textContent.toLowerCase() === v);
+  }
+  suggest.oninput = markSelected;
+
+  function showVoted(v) {
+    poll.classList.remove('voting');
+    form.hidden = true;
+    msg.textContent = `Gracias, ${v.votante}. Votaste por ${v.nombre}.`;
+  }
+
+  async function load() {
+    try {
+      const r = await fetch(`${API}?select=votante,nombre&order=creado`, { headers: HEADERS });
+      if (!r.ok) throw new Error();
+      render(await r.json());
+    } catch {
+      $('ranking').innerHTML = '<p class="empty">No se pudieron cargar los votos.</p>';
+    }
+  }
+
+  form.onsubmit = async e => {
+    e.preventDefault();
+    const vote = { votante: norm($('voter').value), nombre: norm(suggest.value) };
+    if (!vote.nombre) { msg.textContent = 'Elegí un nombre de la lista o escribí uno nuevo.'; return; }
+    $('send').disabled = true;
+    msg.textContent = '';
+    try {
+      const r = await fetch(API, { method: 'POST', headers: { ...HEADERS, Prefer: 'return=minimal' }, body: JSON.stringify(vote) });
+      if (r.status === 409) { msg.textContent = `Ya hay un voto a nombre de ${vote.votante}.`; return; }
+      if (!r.ok) throw new Error();
+      setVoted(vote);
+      showVoted(vote);
+      load();
+    } catch {
+      msg.textContent = 'No se pudo guardar el voto. Probá de nuevo.';
+    } finally {
+      $('send').disabled = false;
+    }
+  };
+
+  const voted = getVoted();
+  if (voted) showVoted(voted);
+  else { poll.classList.add('voting'); form.hidden = false; $('hint').textContent = 'Tocá un nombre para votarlo o sugerí uno nuevo. Pasá el mouse para ver quién lo votó.'; }
+  load();
 </script>
 </body>
 </html>
