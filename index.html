@@ -78,6 +78,7 @@
   form button { padding: 10px; border: 0; border-radius: 10px; background: var(--accent); color: #fff;
                 font: inherit; font-weight: 600; cursor: pointer; }
   form button:disabled { opacity: .5; cursor: default; }
+  label.voter { font-size: .9rem; font-weight: 600; margin: 6px 0 -4px; }
   .msg { font-size: .85rem; color: var(--muted); margin: 12px 0 0; }
 </style>
 </head>
@@ -96,8 +97,9 @@
   <div id="ranking"><p class="empty">Cargando…</p></div>
   <form id="form" hidden>
     <p class="hint" style="margin:0">Tocá los nombres que te gusten para votarlos (tocá de nuevo para sacar el voto) o sugerí uno nuevo.</p>
-    <input type="text" id="voter" placeholder="Tu nombre" maxlength="60" required autocomplete="name">
-    <input type="text" id="suggest" placeholder="Sugerí otro nombre (opcional)" maxlength="40">
+    <input type="text" id="suggest" placeholder="Sugerí otro nombre para el bebé (opcional)" maxlength="40">
+    <label class="voter" for="voter">¿Quién está votando?</label>
+    <input type="text" id="voter" placeholder="Tu nombre, así sabemos quién votó" maxlength="60" required autocomplete="name">
     <button id="send">Votar</button>
   </form>
   <p class="msg" id="msg"></p>
