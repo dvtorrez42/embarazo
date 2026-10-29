@@ -6,8 +6,8 @@ create table votos (
   creado timestamptz not null default now()
 );
 
--- Una persona, un voto
-create unique index votos_votante_unico on votos (lower(trim(votante)));
+-- Una persona puede votar varios nombres, pero cada nombre una sola vez
+create unique index votos_votante_nombre_unico on votos (lower(trim(votante)), lower(trim(nombre)));
 
 -- El proyecto no expone tablas nuevas automáticamente: dar acceso explícito
 grant select, insert on votos to anon;
