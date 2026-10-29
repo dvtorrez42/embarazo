@@ -90,10 +90,11 @@
 </main>
 
 <main class="poll" id="poll">
-  <h2>Nombres para el bebé</h2>
-  <p class="hint" id="hint">Pasá el mouse sobre un nombre para ver quién lo votó.</p>
+  <h2>¿Querés sugerir algún nombre para el bebé?</h2>
+  <p class="hint">Todavía no nos decidimos por un nombre para el bebé, pero este es el ranking entre nuestros amigos y familiares</p>
   <div id="ranking"><p class="empty">Cargando…</p></div>
   <form id="form" hidden>
+    <p class="hint" style="margin:0">Tocá los nombres que te gusten (podés elegir varios) o sugerí uno nuevo.</p>
     <input type="text" id="voter" placeholder="Tu nombre" maxlength="60" required autocomplete="name">
     <input type="text" id="suggest" placeholder="Sugerí otro nombre (opcional)" maxlength="40">
     <label class="honor"><input type="checkbox" id="honor" required> Prometo votar una sola vez</label>
@@ -239,7 +240,7 @@
 
   const voted = getVoted();
   if (voted) showVoted(voted);
-  else { poll.classList.add('voting'); form.hidden = false; $('hint').textContent = 'Tocá los nombres que te gusten (podés elegir varios) o sugerí uno nuevo. Pasá el mouse para ver quién los votó.'; }
+  else { poll.classList.add('voting'); form.hidden = false; }
   load();
 </script>
 </body>
