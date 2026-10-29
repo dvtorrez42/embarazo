@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Semanas de Pau</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤰</text></svg>">
+<style>
+  :root {
+    --bg: #fdf6f0;
+    --card: #ffffff;
+    --text: #3d2c2e;
+    --muted: #8a7577;
+    --accent: #d97a8a;
+    --track: #f1e4dc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1819;
+      --card: #2a2223;
+      --text: #f3e8e6;
+      --muted: #b09fa0;
+      --accent: #e893a1;
+      --track: #3a3031;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 16px;
+  }
+  main {
+    background: var(--card);
+    border-radius: 24px;
+    padding: 40px 32px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,.06);
+  }
+  h1 { font-size: 1.1rem; font-weight: 500; color: var(--muted); margin: 0 0 24px; }
+  .weeks { font-size: 4.5rem; font-weight: 700; color: var(--accent); line-height: 1; }
+  .weeks small { font-size: 1.2rem; font-weight: 500; color: var(--text); display: block; margin-top: 8px; }
+  .months { font-size: 1.4rem; margin: 28px 0; }
+  .bar { height: 10px; background: var(--track); border-radius: 99px; overflow: hidden; }
+  .bar div { height: 100%; background: var(--accent); border-radius: 99px; }
+  .meta { color: var(--muted); font-size: .9rem; margin-top: 16px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Pau está de</h1>
+  <div class="weeks"><span id="w"></span><small id="wd"></small></div>
+  <div class="months" id="m"></div>
+  <div class="bar"><div id="bar"></div></div>
+  <div class="meta" id="meta"></div>
+</main>
+<script>
+  // Fecha probable de parto; el inicio de la gestación se calcula como FPP − 280 días
+  const FPP = new Date(2027, 2, 4);
+  const DAY = 86400000;
+  const start = new Date(FPP.getTime() - 280 * DAY);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const days = Math.round((today - start) / DAY);
+  const weeks = Math.floor(days / 7);
+  const extraDays = days % 7;
+
+  // Meses calendario cumplidos desde el inicio, y semanas restantes
+  let months = (today.getFullYear() - start.getFullYear()) * 12 + today.getMonth() - start.getMonth();
+  if (today.getDate() < start.getDate()) months--;
+  const monthMark = new Date(start.getFullYear(), start.getMonth() + months, start.getDate());
+  const remWeeks = Math.floor(Math.round((today - monthMark) / DAY) / 7);
+
+  const plural = (n, s, p) => `${n} ${n === 1 ? s : p}`;
+  document.getElementById('w').textContent = weeks;
+  document.getElementById('wd').textContent =
+    extraDays ? `semanas y ${plural(extraDays, 'día', 'días')}` : 'semanas';
+  document.getElementById('m').textContent =
+    `${plural(months, 'mes', 'meses')} y ${plural(remWeeks, 'semana', 'semanas')}`;
+  document.getElementById('bar').style.width = Math.min(100, days / 280 * 100) + '%';
+
+  const left = Math.round((FPP - today) / DAY);
+  const fmt = d => d.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' });
+  document.getElementById('meta').innerHTML =
+    `Fecha probable de parto: ${fmt(FPP)}<br>` +
+    (left > 0 ? `Faltan ${plural(left, 'día', 'días')}` : '¡Ya llegó la fecha!');
+</script>
+</body>
+</html>
