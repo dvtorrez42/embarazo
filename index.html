@@ -61,7 +61,9 @@
   .row { display: block; width: 100%; padding: 6px 8px; margin: 0 -8px 4px; border: 0; border-radius: 10px;
          background: none; color: inherit; font: inherit; text-align: left; cursor: default; position: relative; }
   .poll.voting .row { cursor: pointer; }
-  .poll.voting .row:hover, .row.sel { background: var(--track); }
+  @media (hover: hover) { .poll.voting .row:hover { background: var(--bg); } }
+  .row.sel { box-shadow: inset 0 0 0 2px var(--accent); }
+  .row.sel b::before { content: '✓ '; color: var(--accent); }
   .row .top { display: flex; justify-content: space-between; font-size: .95rem; margin-bottom: 4px; }
   .row .top b { font-weight: 600; }
   .row .bar { height: 6px; }
@@ -73,7 +75,6 @@
   form { margin-top: 16px; display: grid; gap: 10px; }
   input[type=text] { width: 100%; padding: 10px 12px; border: 1px solid var(--track); border-radius: 10px;
                      background: var(--bg); color: var(--text); font: inherit; }
-  label.honor { font-size: .85rem; color: var(--muted); display: flex; gap: 8px; align-items: flex-start; }
   form button { padding: 10px; border: 0; border-radius: 10px; background: var(--accent); color: #fff;
                 font: inherit; font-weight: 600; cursor: pointer; }
   form button:disabled { opacity: .5; cursor: default; }
@@ -94,10 +95,9 @@
   <p class="hint">Todavía no nos decidimos por un nombre para el bebé, pero este es el ranking entre nuestros amigos y familiares</p>
   <div id="ranking"><p class="empty">Cargando…</p></div>
   <form id="form" hidden>
-    <p class="hint" style="margin:0">Tocá los nombres que te gusten (podés elegir varios) o sugerí uno nuevo.</p>
+    <p class="hint" style="margin:0">Tocá los nombres que te gusten para votarlos (tocá de nuevo para sacar el voto) o sugerí uno nuevo.</p>
     <input type="text" id="voter" placeholder="Tu nombre" maxlength="60" required autocomplete="name">
     <input type="text" id="suggest" placeholder="Sugerí otro nombre (opcional)" maxlength="40">
-    <label class="honor"><input type="checkbox" id="honor" required> Prometo votar una sola vez</label>
     <button id="send">Votar</button>
   </form>
   <p class="msg" id="msg"></p>
@@ -189,7 +189,7 @@
 
   function markSelected() {
     for (const r of document.querySelectorAll('.row'))
-      r.classList.toggle('sel', selected.has(r.querySelector('b').textContent.toLowerCase()));
+      r.setAttribute('aria-pressed', r.classList.toggle('sel', selected.has(r.querySelector('b').textContent.toLowerCase())));
   }
 
   function showVoted(v) {
